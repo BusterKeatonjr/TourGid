@@ -100,12 +100,19 @@ export class UsersService {
       throw new HttpException('Пользователь не найден', HttpStatus.NOT_FOUND);
     }
     
-    // Добавляем поездку
+    // Инициализируем массив, если он еще не существует
     if (!user.myTrips) {
       user.myTrips = [];
     }
     
-    user.myTrips.push(tripData);
+    // Добавляем поле number, равное длине массива + 1
+    const tripWithNumber = {
+      ...tripData,
+      number: user.myTrips.length + 1
+    };
+    
+    // Добавляем поездку
+    user.myTrips.push(tripWithNumber);
     await this.userRepository.save(user);
     
     // Не возвращаем пароль

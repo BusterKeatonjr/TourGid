@@ -1,4 +1,3 @@
-// src/llm/llm.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { LlmController } from './llm.controller';
