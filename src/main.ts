@@ -10,8 +10,8 @@ async function bootstrap() {
   app.enableCors();
   
   // Настройка статических файлов
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
-    prefix: '/uploads/',
+  app.useStaticAssets(join(__dirname, '..', 'public'), {
+    prefix: '/public/',
   });
   
   // Использование переменной окружения PORT или порта 3000 по умолчанию

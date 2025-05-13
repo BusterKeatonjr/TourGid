@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title id="place-title">Достопримечательность Крыма</title>
+    <script src="https://api-maps.yandex.ru/2.1/?apikey=599bab60-40ff-47de-842c-8a7cf302146f&lang=ru_RU"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        .place-info { display: flex; margin-top: 20px; }
+        .place-description { flex: 1; padding-right: 20px; }
+        .place-map { flex: 1; height: 400px; }
+        .back-button { margin-top: 20px; padding: 10px 20px; cursor: pointer; }
+        .type-badge { 
+            display: inline-block; 
+            background-color: #1976D2; 
+            color: white; 
+            padding: 5px 10px; 
+            border-radius: 4px; 
+            margin-bottom: 10px; 
+        }
+    </style>
+</head>
+<body>
+    <h1 id="place-name"></h1>
+    
+    <div class="place-info">
+        <div class="place-description">
+            <div class="type-badge" id="place-type"></div>
+            <p id="place-desc"></p>
+            
+            <button class="back-button" onclick="window.history.back()">Назад</button>
+        </div>
+        <div id="map" class="place-map"></div>
+    </div>
+    
+    <script>
+        // Получаем ID места из URL
+        const placeId = window.location.pathname.split('/').pop();
+        
+        // Загружаем данные о месте
+        fetch(`/api/place/${placeId}`)
+            .then(response => response.json())
+            .then(place => {
+                document.getElementById('place-name').textContent = place.name;
+                document.getElementById('place-title').textContent = place.name + ' - Достопримечательности Крыма';
+                document.getElementById('place-type').textContent = place.type;
+                document.getElementById('place-desc').textContent = place.description;
+                
+                // Инициализируем карту
+                ymaps.ready(function() {
+                    var myMap = new ymaps.Map('map', {
+                        center: place.coords,
+                        zoom: 15
+                    });
+                    
+                    var placemark = new ymaps.Placemark(place.coords, {
+                        balloonContent: place.name
+                    }, {
+                        preset: 'islands#blueIcon'
+                    });
+                    
+                    myMap.geoObjects.add(placemark);
+                });
+            })
+            .catch(error => {
+                console.error('Ошибка загрузки данных о месте:', error);
+                document.getElementById('place-name').textContent = 'Ошибка загрузки';
+            });
+    </script>
+</body>
+</html>
