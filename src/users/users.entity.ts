@@ -29,8 +29,22 @@ export class User {
   @Column({ nullable: true, type: 'date' })
   birthday: Date;
 
+  // Оставляем для обратной совместимости
   @Column({ nullable: true })
   photo: string;
+
+  // Новые поля для хранения фотографии в БД
+  @Column({ type: 'bytea', nullable: true })
+  photoData: Buffer;
+
+  @Column({ nullable: true })
+  photoContentType: string;
+
+  @Column({ nullable: true })
+  photoFilename: string;
+
+  @Column({ nullable: true })
+  photoSize: number;
 
   @Column({ type: 'json', nullable: true })
   myTrips: any[];

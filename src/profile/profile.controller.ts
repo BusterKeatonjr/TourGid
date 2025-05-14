@@ -1,11 +1,10 @@
-import { Controller, Get, Post, Put, Body, UseGuards, Request, Param, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, UseGuards, Request, Param, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '../auth/auth.guard';
 import { UsersService } from '../users/users.service';
 import { UpdateProfileDto } from '../users/dto/update-profile.dto';
 import { AddTripDto } from '../users/dto/add-trip.dto';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { memoryStorage } from 'multer';
 
 @Controller('profile')
 @UseGuards(AuthGuard)
@@ -25,22 +24,39 @@ export class ProfileController {
   @Post('upload-photo')
   @UseInterceptors(
     FileInterceptor('photo', {
-      storage: diskStorage({
-        destination: './uploads/profile-photos',
-        filename: (req, file, cb) => {
-          const userId = req.user.sub;
-          const randomName = Array(32)
-            .fill(null)
-            .map(() => Math.round(Math.random() * 16).toString(16))
-            .join('');
-          return cb(null, `${userId}-${randomName}${extname(file.originalname)}`);
-        },
-      }),
+      storage: memoryStorage(),
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB
+      },
+      fileFilter: (req, file, cb) => {
+        if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
+          return cb(new BadRequestException('Only image files are allowed!'), false);
+        }
+        cb(null, true);
+      },
     }),
   )
-  uploadPhoto(@Request() req, @UploadedFile() file) {
-    const photoUrl = `profile-photos/${file.filename}`;
-    return this.usersService.updateProfile(req.user.sub, { photo: photoUrl });
+  async uploadPhoto(@Request() req, @UploadedFile() file) {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+
+    const userId = req.user.sub;
+    
+    // Подготавливаем данные фото для сохранения в БД
+    const photoData = {
+      data: file.buffer,
+      contentType: file.mimetype,
+      filename: file.originalname,
+      size: file.size
+    };
+
+    return this.usersService.savePhotoToDb(userId, photoData);
+  }
+
+  @Get('photo')
+  async getPhoto(@Request() req) {
+    return this.usersService.getUserPhoto(req.user.sub);
   }
 
   @Post('trips')

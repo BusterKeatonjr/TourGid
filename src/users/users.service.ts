@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './users.entity';
@@ -118,5 +118,55 @@ export class UsersService {
     // Не возвращаем пароль
     const { password, ...result } = user;
     return result as User;
+  }
+
+  // Новые методы для работы с фотографиями в БД
+  async savePhotoToDb(userId: number, photoData: {
+    data: Buffer;
+    contentType: string;
+    filename: string;
+    size: number;
+  }): Promise<any> {
+    const user = await this.findOneById(userId);
+    
+    if (!user) {
+      throw new HttpException('Пользователь не найден', HttpStatus.NOT_FOUND);
+    }
+    
+    // Обновляем пользователя с данными фото
+    user.photoData = photoData.data;
+    user.photoContentType = photoData.contentType;
+    user.photoFilename = photoData.filename;
+    user.photoSize = photoData.size;
+    
+    await this.userRepository.save(user);
+    
+    // Возвращаем обновленного пользователя без бинарных данных для безопасности
+    return {
+      id: user.id,
+      username: user.username,
+      photoContentType: user.photoContentType,
+      photoFilename: user.photoFilename,
+      photoSize: user.photoSize,
+      updatedAt: new Date()
+    };
+  }
+
+  async getUserPhoto(userId: number): Promise<any> {
+    const user = await this.findOneById(userId);
+    
+    if (!user) {
+      throw new HttpException('Пользователь не найден', HttpStatus.NOT_FOUND);
+    }
+    
+    if (!user.photoData) {
+      throw new HttpException('Фотография не найдена', HttpStatus.NOT_FOUND);
+    }
+    
+    return {
+      data: user.photoData.toString('base64'),
+      contentType: user.photoContentType,
+      filename: user.photoFilename
+    };
   }
 }
