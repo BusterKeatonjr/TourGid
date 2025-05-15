@@ -169,4 +169,109 @@ export class UsersService {
       filename: user.photoFilename
     };
   }
+  async deleteTrip(userId: number, tripNumber: number): Promise<User> {
+    console.log(`Deleting trip ${tripNumber} for user ${userId}`);
+    
+    const user = await this.findOneById(userId);
+    
+    if (!user) {
+      throw new HttpException('Пользователь не найден', HttpStatus.NOT_FOUND);
+    }
+    
+    if (!user.myTrips || user.myTrips.length === 0) {
+      throw new HttpException('Поездки не найдены', HttpStatus.NOT_FOUND);
+    }
+    
+    console.log('Trips before deletion:', JSON.stringify(user.myTrips));
+    
+    // Используем преобразование к числу для корректного сравнения
+    const tripIndex = user.myTrips.findIndex(trip => 
+      (trip.number !== undefined && Number(trip.number) === Number(tripNumber)) || 
+      (trip.number === undefined && Number(tripNumber) <= user.myTrips.length)
+    );
+    
+    console.log(`Trip index found: ${tripIndex}`);
+    
+    if (tripIndex === -1) {
+      // Если не смогли найти по номеру, попробуем удалить по индексу для обратной совместимости
+      // Учитываем, что индексы начинаются с 0, а номера с 1
+      if (tripNumber > 0 && tripNumber <= user.myTrips.length) {
+        user.myTrips.splice(tripNumber - 1, 1);
+        console.log(`Removed trip by index: ${tripNumber - 1}`);
+      } else {
+        console.log('Trip not found');
+        throw new HttpException('Поездка с указанным номером не найдена', HttpStatus.NOT_FOUND);
+      }
+    } else {
+      // Удаляем поездку по индексу
+      user.myTrips.splice(tripIndex, 1);
+      console.log(`Removed trip at index: ${tripIndex}`);
+    }
+    
+    // Обновляем номера оставшихся поездок
+    user.myTrips = user.myTrips.map((trip, index) => ({
+      ...trip,
+      number: index + 1
+    }));
+    
+    await this.userRepository.save(user);
+    console.log('User saved after trip deletion');
+    
+    // Не возвращаем пароль
+    const { password, ...result } = user;
+    return result as User;
+  }
+  
+  // Улучшенный метод обновления номеров
+  async updateTripNumbers(userId: number): Promise<void> {
+    const user = await this.findOneById(userId);
+    if (!user) return;
+    
+    if (user.myTrips && user.myTrips.length > 0) {
+      // Создаем новый массив с присвоенными номерами
+      user.myTrips = user.myTrips.map((trip, index) => ({
+        ...trip,
+        number: index + 1
+      }));
+      
+      await this.userRepository.save(user);
+      console.log('Trip numbers updated');
+    }
+  }
+  async deleteTripByIndex(userId: number, index: number): Promise<User> {
+  console.log(`Deleting trip at index ${index} for user ${userId}`);
+  
+  const user = await this.findOneById(userId);
+  
+  if (!user) {
+    throw new HttpException('Пользователь не найден', HttpStatus.NOT_FOUND);
+  }
+  
+  if (!user.myTrips || user.myTrips.length === 0) {
+    throw new HttpException('Поездки не найдены', HttpStatus.NOT_FOUND);
+  }
+  
+  if (index < 0 || index >= user.myTrips.length) {
+    throw new HttpException(`Поездка с индексом ${index} не найдена`, HttpStatus.NOT_FOUND);
+  }
+  
+  console.log('Trips before deletion:', JSON.stringify(user.myTrips.map(t => t.destination)));
+  
+  // Удаляем поездку по индексу
+  user.myTrips.splice(index, 1);
+  console.log(`Removed trip at index: ${index}`);
+  
+  // Обновляем номера оставшихся поездок
+  user.myTrips = user.myTrips.map((trip, idx) => ({
+    ...trip,
+    number: idx + 1
+  }));
+  
+  await this.userRepository.save(user);
+  console.log('User saved after trip deletion');
+  
+  // Не возвращаем пароль
+  const { password, ...result } = user;
+  return result as User;
+}
 }
